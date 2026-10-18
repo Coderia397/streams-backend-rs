@@ -5,7 +5,7 @@
   "vars": {
     "BRAND_NAME": "Streams",
     "SITE_URL": "https://streams.watch",
-    "HELP_URL": "https://streams.watch/help",
+    "HELP_URL": "https://help.streams.watch",
     "HELP_EMAIL": "help@streams.watch",
     "SENDER_EMAIL": "no-reply@streams.watch",
     "CODE_MINUTES": "10",

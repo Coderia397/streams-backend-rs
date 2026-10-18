@@ -87,12 +87,14 @@ pub fn render(brand: &Brand, req: &Request) -> Rendered {
     let part = req.kind.part();
     let minutes = req.minutes.to_string();
     let new_email = req.new_email.clone().unwrap_or_default();
+    let code_text = req.code.clone().unwrap_or_default();
     let device = req.device.clone().unwrap_or_default();
     let where_ = device.country.as_ref().map(|c| text(lang, "email-device-where", &[("country", c)])).unwrap_or_default();
     let vars: Vec<(&str, &str)> = vec![
         ("brand", brand.name),
         ("help_email", brand.help_email),
         ("minutes", &minutes),
+        ("code", &code_text),
         ("new_email", &new_email),
         ("browser", &device.browser),
         ("system", &device.system),
@@ -189,7 +191,7 @@ pub fn render(brand: &Brand, req: &Request) -> Rendered {
 mod tests {
     use super::*;
 
-    const BRAND: Brand = Brand { name: "Streams", help_email: "help@streams.watch", site_url: "https://streams.watch", help_url: "https://streams.watch/help" };
+    const BRAND: Brand = Brand { name: "Streams", help_email: "help@streams.watch", site_url: "https://streams.watch", help_url: "https://help.streams.watch" };
 
     fn request(kind: Kind, lang: &str) -> Request {
         Request { kind, lang: lang.into(), to: "a@b.co".into(), name: Some("Ada".into()), profile: None, link: Some("https://streams.watch/auth/confirm?token_hash=abc&type=signup".into()), code: None, minutes: 10, new_email: None, device: None }
@@ -202,7 +204,7 @@ mod tests {
         assert!(r.html.contains("href=\"https://streams.watch/auth/confirm?token_hash=abc&amp;type=signup\""));
         assert!(r.text.contains("https://streams.watch/auth/confirm?token_hash=abc&type=signup"));
         assert!(r.html.contains("Hello Ada,") && r.html.contains("help@streams.watch"));
-        assert!(r.html.contains("href=\"https://streams.watch/help\""), "the Help Center words in the footer are a link");
+        assert!(r.html.contains("href=\"https://help.streams.watch\""), "the Help Center words in the footer are a link");
     }
 
     #[test]
