@@ -11,6 +11,7 @@ step2 = (HERE / "migrations/20261011150000_main_profile_and_default_kids.sql").r
 step3 = (HERE / "migrations/20261012100000_devices_and_profile_preferences.sql").read_text()
 step4 = (HERE / "migrations/20261012200000_device_signature.sql").read_text()
 step5 = (HERE / "migrations/20261013100000_rating_system.sql").read_text()
+step6 = (HERE / "migrations/20261023120000_prune_idle_sessions.sql").read_text()
 marker = "-- realtime for live multi device updates"
 cut = core.index(marker)
 cut = core.rfind("\n", 0, cut) + 1
@@ -52,6 +53,10 @@ insert into public.schema_versions (name) values ('device_signature') on conflic
 -- 5. rating labels: british or american, by account choice or the country of the device ------------------------------------------
 {step5}
 insert into public.schema_versions (name) values ('rating_system') on conflict do nothing;
+
+-- 6. sign in sessions unused for 30 days end (with the address and browser kept for them) -------------------------------------------
+{step6}
+insert into public.schema_versions (name) values ('prune_idle_sessions') on conflict do nothing;
 
 select name as applied, applied_at from public.schema_versions order by applied_at;
 """
