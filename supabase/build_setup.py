@@ -2,7 +2,7 @@
 """Builds setup.sql, the one file to run in the Supabase SQL editor. It brings any state of the project (empty, or with the first
 accounts migration already applied) to the current schema, and running it again changes nothing.
   * The first migration runs only when public.profiles does not exist yet.
-  * The second, third and fourth migrations are written so that every statement can be repeated.
+  * The later migrations are written so that every statement can be repeated.
   * schema_versions records what was applied and when."""
 import pathlib
 HERE = pathlib.Path(__file__).resolve().parent
@@ -12,6 +12,8 @@ step3 = (HERE / "migrations/20261012100000_devices_and_profile_preferences.sql")
 step4 = (HERE / "migrations/20261012200000_device_signature.sql").read_text()
 step5 = (HERE / "migrations/20261013100000_rating_system.sql").read_text()
 step6 = (HERE / "migrations/20261023120000_prune_idle_sessions.sql").read_text()
+step7 = (HERE / "migrations/20261018040200_profile_settings_gender_trailers.sql").read_text()
+step8 = (HERE / "migrations/20261026120000_profile_guide.sql").read_text()
 marker = "-- realtime for live multi device updates"
 cut = core.index(marker)
 cut = core.rfind("\n", 0, cut) + 1
@@ -57,6 +59,14 @@ insert into public.schema_versions (name) values ('rating_system') on conflict d
 -- 6. sign in sessions unused for 30 days end (with the address and browser kept for them) -------------------------------------------
 {step6}
 insert into public.schema_versions (name) values ('prune_idle_sessions') on conflict do nothing;
+
+-- 7. Edit Profile's gender and the Trailers You've Watched shelf ----------------------------------------------------------------------
+{step7}
+insert into public.schema_versions (name) values ('profile_settings_gender_trailers') on conflict do nothing;
+
+-- 8. the guide through the site, once per new profile ---------------------------------------------------------------------------------
+{step8}
+insert into public.schema_versions (name) values ('profile_guide') on conflict do nothing;
 
 select name as applied, applied_at from public.schema_versions order by applied_at;
 """

@@ -1006,4 +1006,52 @@ end $$;
 
 insert into public.schema_versions (name) values ('prune_idle_sessions') on conflict do nothing;
 
+-- 7. Edit Profile's gender and the Trailers You've Watched shelf ----------------------------------------------------------------------
+-- Edit Profile's gender and the Trailers You've Watched shelf, per profile (frontend note 78, 2026-10-18). Applied to the project on
+-- 2026-10-18 through the Supabase tools; this file was added on 2026-10-26 from the project's own migration record, so setup.sql
+-- matches the live database.
+alter table public.profile_settings
+  add column if not exists gender text check (gender is null or gender in ('woman','man','none')),
+  add column if not exists trailers_watched jsonb not null default '[]'::jsonb check (jsonb_typeof(trailers_watched) = 'array' and jsonb_array_length(trailers_watched) <= 40);
+comment on column public.profile_settings.gender is 'Edit Profile: woman, man or none (prefer not to say).';
+comment on column public.profile_settings.trailers_watched is 'Trailers You have Watched: up to 40 entries, newest first, each {id, tv}.';
+
+insert into public.schema_versions (name) values ('profile_settings_gender_trailers') on conflict do nothing;
+
+-- 8. the guide through the site, once per new profile ---------------------------------------------------------------------------------
+-- The guide through the site (frontend components/layout/tour.rs) shows once per profile: the first time a new profile is used on a
+-- computer, on whichever device that is, and never again (owner, 2026-10-26; frontend note 130). guide_seen_at is null for a profile that
+-- has not had it. Profiles that existed before this migration count as seen; it is set when the column is added, so running this file
+-- again does not mark newer profiles. claim_profile_guide sets it once and answers whether this call was the one that set it, so two
+-- devices can never both show the guide.
+do $$
+begin
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'guide_seen_at') then
+    alter table public.profiles add column guide_seen_at timestamptz;
+    update public.profiles set guide_seen_at = created_at;
+  end if;
+end $$;
+comment on column public.profiles.guide_seen_at is 'When the guide through the site was shown to this profile; null until then (claim_profile_guide).';
+
+create or replace function public.claim_profile_guide(p_profile uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_owner uuid;
+begin
+  select user_id into v_owner from public.profiles where id = p_profile;
+  if v_owner is null or v_owner is distinct from (select auth.uid()) then
+    raise exception 'not allowed' using errcode = '42501';
+  end if;
+  update public.profiles set guide_seen_at = now() where id = p_profile and guide_seen_at is null;
+  return found;
+end $$;
+revoke all on function public.claim_profile_guide(uuid) from public, anon;
+grant execute on function public.claim_profile_guide(uuid) to authenticated;
+
+insert into public.schema_versions (name) values ('profile_guide') on conflict do nothing;
+
 select name as applied, applied_at from public.schema_versions order by applied_at;
