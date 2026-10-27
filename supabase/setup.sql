@@ -560,16 +560,13 @@ drop trigger if exists profiles_flags_guard on public.profiles;
 create trigger profiles_flags_guard before insert or update on public.profiles
   for each row execute function public.profile_flags_guard();
 
--- Five profiles per account. The automatic Kids profile is not counted.
+-- Five profiles per account, Kids profiles included (owner, 2026-10-27; migration 20261027140133).
 create or replace function public.enforce_profile_limit() returns trigger
 language plpgsql set search_path = public as $$
 begin
-  if new.auto_kids then
-    return new;
-  end if;
   -- two parallel inserts for one account must not both pass the count
   perform pg_advisory_xact_lock(hashtextextended(new.user_id::text, 0));
-  if (select count(*) from public.profiles where user_id = new.user_id and not auto_kids) >= 5 then
+  if (select count(*) from public.profiles where user_id = new.user_id) >= 5 then
     raise exception 'profile limit reached' using errcode = 'P0001';
   end if;
   return new;
